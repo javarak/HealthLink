@@ -1,0 +1,101 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "healthlink"
+version = "1.0.0"
+description = "AI-powered health management system with symptom analysis and doctor recommendations"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "HealthLink Team"}
+]
+keywords = ["fastapi", "ai", "healthcare", "genai", "langchain", "rag"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+]
+
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.7.4",
+    "pydantic-settings>=2.1.0",
+    "python-multipart>=0.0.6",
+    "langchain>=1.0.0",
+    "langchain-core>=0.3.0",
+    "langchain-text-splitters>=0.3.0",
+    "langchain-google-genai>=3.0.0",
+    "pinecone>=3.0.0",
+    "sqlalchemy>=2.0.25",
+    "aiosqlite>=0.19.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.26.0",
+    "tenacity>=8.2.3",
+    "pandas>=2.1.4",
+    "numpy>=1.26.3",
+    "streamlit>=1.30.0",
+    "plotly>=5.18.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==7.4.4",
+    "pytest-asyncio==0.23.3",
+    "pytest-cov==4.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/healthlink"
+Documentation = "https://github.com/yourusername/healthlink#readme"
+Repository = "https://github.com/yourusername/healthlink"
+
+[project.scripts]
+healthlink = "main:app"
+
+[tool.setuptools]
+packages = ["agents", "api", "config", "core", "tests", "ui", "utils"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = [
+    "--verbose",
+    "--cov=agents",
+    "--cov=api",
+    "--cov=core",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
