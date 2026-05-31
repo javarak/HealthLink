@@ -1,5 +1,8 @@
 # Multi-stage Dockerfile for HealthLink
-# Optimized for Google Cloud Run deployment
+# Supports both FastAPI backend and Streamlit UI
+# Build arg: SERVICE_TYPE (api or ui)
+
+ARG SERVICE_TYPE=api
 
 FROM python:3.12-slim as builder
 
@@ -25,11 +28,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Final stage
 FROM python:3.12-slim
 
+ARG SERVICE_TYPE=api
+
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
-    PORT=8000
+    SERVICE_TYPE=${SERVICE_TYPE}
+
+# Set port based on service type
+ENV PORT=${SERVICE_TYPE:+8501}
+ENV PORT=${PORT:-8000}
 
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -54,12 +63,20 @@ RUN useradd -m -u 1000 healthlink && \
     chown -R healthlink:healthlink /app
 USER healthlink
 
-# Expose port
-EXPOSE 8000
+# Expose port (default 8000 for API, 8501 for UI)
+EXPOSE ${PORT}
 
-# Health check
+# Health check - differs by service type
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+    CMD if [ "$SERVICE_TYPE" = "ui" ]; then \
+            curl -f http://localhost:8501/_stcore/health || exit 1; \
+        else \
+            curl -f http://localhost:8000/api/v1/health || exit 1; \
+        fi
 
-# Run application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Run application based on SERVICE_TYPE
+CMD if [ "$SERVICE_TYPE" = "ui" ]; then \
+        exec streamlit run ui/streamlit_app.py --server.port=8501 --server.address=0.0.0.0; \
+    else \
+        exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1; \
+    fi
