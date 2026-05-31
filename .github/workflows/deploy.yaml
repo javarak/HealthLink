@@ -13,7 +13,9 @@ env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: asia-south1
   SERVICE_NAME: healthlink
+  UI_SERVICE_NAME: healthlink-ui
   IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/healthlink
+  UI_IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT_ID }}/healthlink-ui
 
 jobs:
   test:
@@ -130,6 +132,40 @@ jobs:
           curl -f ${{ env.SERVICE_URL }}/api/v1/health || exit 1
           echo "Health check passed!"
 
+      - name: Build UI Docker image
+        run: |
+          docker build --build-arg SERVICE_TYPE=ui -t ${{ env.UI_IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.UI_IMAGE_NAME }}:${{ github.sha }} ${{ env.UI_IMAGE_NAME }}:latest
+
+      - name: Push UI Docker image to GCR
+        run: |
+          docker push ${{ env.UI_IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.UI_IMAGE_NAME }}:latest
+
+      - name: Deploy UI to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.UI_SERVICE_NAME }} \
+            --image ${{ env.UI_IMAGE_NAME }}:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --allow-unauthenticated \
+            --memory 1Gi \
+            --cpu 1 \
+            --timeout 300 \
+            --max-instances 5 \
+            --port 8501 \
+            --min-instances 0 \
+            --set-env-vars "API_URL=${{ env.SERVICE_URL }},GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }},PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }}"
+
+      - name: Get UI service URL
+        run: |
+          UI_URL=$(gcloud run services describe ${{ env.UI_SERVICE_NAME }} \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --format 'value(status.url)')
+          echo "UI deployed to: $UI_URL"
+          echo "UI_SERVICE_URL=$UI_URL" >> $GITHUB_ENV
+
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
@@ -141,7 +177,8 @@ jobs:
         if: needs.build-and-deploy.result == 'success'
         run: |
           echo "Deployment successful!"
-          echo "HealthLink is now live on Google Cloud Run"
+          echo "HealthLink API is live on Google Cloud Run"
+          echo "HealthLink UI is live on Google Cloud Run"
 
       - name: Deployment Failed
         if: needs.build-and-deploy.result == 'failure'
