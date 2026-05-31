@@ -69,3 +69,5 @@ docker-compose.override.yml
 .gcloudignore
 credentials.json
 service-account-key.json
+github-sa-key.json
+*-sa-key.json
